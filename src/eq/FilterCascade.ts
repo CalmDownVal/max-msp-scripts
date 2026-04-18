@@ -175,8 +175,10 @@ export class FilterCascade {
 		let num = 0;
 		this.filtersOrdered.forEach((other, index) => {
 			const dx = Math.abs(other.x - current.x);
-			if (dx < min) {
-				min = dx;
+			const dy = Math.abs(other.y - current.y);
+			const ds = dx * dx + dy * dy;
+			if (ds < min) {
+				min = ds;
 				num = index + 1;
 			}
 		});
