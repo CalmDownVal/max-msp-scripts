@@ -136,7 +136,6 @@ function paint() {
 
 	mgraphics.stroke();
 
-
 	// gain curve
 	setColor("live_lcd_control_fg_alt");
 	mgraphics.set_line_width(2.0);
@@ -153,20 +152,20 @@ function paint() {
 
 
 	// filter handles
-	setColor("live_lcd_control_fg");
-	mgraphics.set_line_width(1.0);
-
+	setColor("live_lcd_control_fg_zombie");
 	const selected = cascade.getFilter();
 	for (index = 0; index < count; index += 1) {
 		filter = filters[index];
-		if (filter === selected) {
+		if (filter !== selected) {
 			mgraphics.ellipse(filter.x - HANDLE_RADIUS, filter.y - HANDLE_RADIUS, HANDLE_DIAMETER, HANDLE_DIAMETER);
 			mgraphics.fill();
 		}
-		else {
-			mgraphics.ellipse(filter.x - HANDLE_RADIUS + 1, filter.y - HANDLE_RADIUS + 1, HANDLE_DIAMETER - 2, HANDLE_DIAMETER - 2);
-			mgraphics.stroke();
-		}
+	}
+
+	if (selected) {
+		setColor("live_lcd_control_fg");
+		mgraphics.ellipse(selected.x - HANDLE_RADIUS, selected.y - HANDLE_RADIUS, HANDLE_DIAMETER, HANDLE_DIAMETER);
+		mgraphics.fill();
 	}
 }
 
@@ -255,7 +254,7 @@ function gain(gain: number, n?: number) {
 
 
 function ondblclick(x: number, y: number) {
-	const hit = hitTest(x, y);
+	const hit = hitTest(x, y, 1.0);
 	if (hit) {
 		cascade.removeFilter(hit.num);
 	}
@@ -283,7 +282,7 @@ function ondblclick(x: number, y: number) {
 
 function ondrag(x: number, y: number, isPressed: 1 | 0) {
 	if (dragState === "idle") {
-		const hit = hitTest(x, y, HANDLE_RADIUS * 2.0);
+		const hit = hitTest(x, y, 3.0);
 		if (hit) {
 			dragState = "active";
 			dragDX = hit.dx;
@@ -308,7 +307,7 @@ function ondrag(x: number, y: number, isPressed: 1 | 0) {
 function onwheel(x: number, y: number, _dx: number, dy: number) {
 	let num;
 	if (dragState !== "active") {
-		const hit = hitTest(x, y, HANDLE_RADIUS * 3.0);
+		const hit = hitTest(x, y, 3.0);
 		if (!hit) {
 			return;
 		}
@@ -340,7 +339,7 @@ function subdivide(a: Point, b: Point) {
 	};
 
 	// when within some horizontal distance, compare to a naive lerp
-	if (adx < 16.0) {
+	if (adx < 10.0) {
 		const ly = (a.y + b.y) * 0.5;
 		if (Math.abs(y - ly) < 0.5) {
 			// skip this subdivision - lerp is good enough
@@ -362,7 +361,7 @@ function setColor(color: string) {
 }
 
 hitTest.local = 1;
-function hitTest(x: number, y: number, r: number = HANDLE_RADIUS) {
+function hitTest(x: number, y: number, extent: number = 1.0) {
 	const filters = cascade.getFiltersOrdered();
 	const { length } = filters;
 
@@ -371,9 +370,10 @@ function hitTest(x: number, y: number, r: number = HANDLE_RADIUS) {
 	let dx;
 	let dy;
 	let ds;
-	let min = r * r;
+	let min = HANDLE_RADIUS * extent;
 	let result = null;
 
+	min *= min;
 	for (; index < length; index += 1) {
 		filter = filters[index];
 		dx = filter.x - x;
