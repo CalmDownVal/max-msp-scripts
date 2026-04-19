@@ -2,12 +2,12 @@
 //
 // inlets:
 // - 1										... commands
-// - 2										... param recall input
+// - 2										... param recall input (TODO)
 //
 // outlets:
 // - 1										... [cascade~] object coeffs
 // - 2										... selected filter state (select, type, freq, gain, reso)
-// - 3										... param store output
+// - 3										... param store output (TODO)
 //
 // commands:
 // - `bang`									... (re-)outputs current coefficients
@@ -35,7 +35,7 @@ import { f2x, g2y, x2f, y2g, y2r } from "./common";
 import { FREQ_MAX, FREQ_MIN, GRID_X, GRID_X_HIGHLIGHT, GRID_Y, GRID_Y_HIGHLIGHT, HANDLE_RADIUS, HANDLE_DIAMETER, VW, VH, GAIN_DEFAULT, RESO_DEFAULT } from "./constants";
 import { FilterCascade } from "./FilterCascade";
 
-inlets = 1;
+inlets = 2;
 outlets = 3;
 
 mgraphics.init();
@@ -281,7 +281,7 @@ function ondblclick(x: number, y: number) {
 }
 
 function ondrag(x: number, y: number, isPressed: 1 | 0) {
-	if (dragState === "idle") {
+	if (dragState === "idle" && isPressed) {
 		const hit = hitTest(x, y, 3.0);
 		if (hit) {
 			dragState = "active";

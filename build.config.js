@@ -29,7 +29,11 @@ const MaxV8UITarget = defineTarget("MaxV8UI", target => target
 				targets: [
 					{
 						srcFile: "./dist/eq.js",
-						dstFile: "/Users/cdv/Documents/Max 9/Projects/cdKick/code/eq.js",
+						dstFile: "/Users/cdv/Documents/Max 9/Projects/Perc30/code/eq.js",
+					},
+					{
+						srcFile: "./dist/wave.js",
+						dstFile: "/Users/cdv/Documents/Max 9/Projects/Perc30/code/wave.js",
 					},
 				],
 			})
@@ -47,4 +51,5 @@ const MaxV8UITarget = defineTarget("MaxV8UI", target => target
 
 MaxV8UITarget.build(target => {
 	target.entry("eq", "./src/eq/index.ts");
+	target.entry("wave", "./src/wave/index.ts");
 });
