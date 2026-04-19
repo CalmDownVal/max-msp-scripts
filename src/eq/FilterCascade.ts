@@ -334,32 +334,32 @@ export class FilterCascade {
 		return true;
 	}
 
-	public moveFilterXY(x: number, y: number) {
-		const filter = this.getFilter();
+	public moveFilterXY(x: number, y: number, n: number = this.selected) {
+		const filter = this.getFilter(n);
 		if (!filter) {
 			return;
 		}
 
-		this.setFilterFreq(x2f(x));
+		this.setFilterFreq(x2f(x), n);
 
 		const def = FILTER_DEFS[filter.type];
 		if (def.reso === "y") {
-			this.setFilterReso(y2r(y));
+			this.setFilterReso(y2r(y), n);
 		}
 		else if (def.gain === "y") {
-			this.setFilterGain(y2g(y));
+			this.setFilterGain(y2g(y), n);
 		}
 	}
 
-	public moveFilterZ(dz: number) {
-		const filter = this.getFilter();
+	public moveFilterZ(dz: number, n: number = this.selected) {
+		const filter = this.getFilter(n);
 		if (!filter) {
 			return;
 		}
 
 		const def = FILTER_DEFS[filter.type];
 		if (def.reso === "z") {
-			this.setFilterReso(y2r(filter.z + dz));
+			this.setFilterReso(y2r(filter.z + dz), n);
 		}
 	}
 
@@ -565,6 +565,7 @@ const FILTER_DEFS = {
 } satisfies Record<string, FilterDefinition>;
 
 
+getY.local = 1;
 function getY(filter: Filter) {
 	const def = FILTER_DEFS[filter.type];
 
@@ -579,6 +580,7 @@ function getY(filter: Filter) {
 	return g2y(GAIN_DEFAULT);
 }
 
+getZ.local = 1;
 function getZ(filter: Filter) {
 	const def = FILTER_DEFS[filter.type];
 
@@ -589,10 +591,7 @@ function getZ(filter: Filter) {
 	return r2y(RESO_DEFAULT);
 }
 
+byFreqAsc.local = 1;
 function byFreqAsc(a: Filter, b: Filter) {
 	return a.freq - b.freq;
 }
-
-getY.local = 1;
-getZ.local = 1;
-byFreqAsc.local = 1;

@@ -29,6 +29,7 @@ const RAW_RUNTIME_STATE =
         "packageLocation": "./",\
         "packageDependencies": [\
           ["@calmdown/rolldown-workspace", "virtual:70a5498da57db45bc167e3abafc53c714900deaeffe3c7c17582e0a4063136f6f1516487354cd4cbcdc98b53a760804761ccf8387330fb220cd87434ed379878#npm:1.0.0-rc.3"],\
+          ["@calmdown/rollup-plugin-copy", "npm:1.0.0"],\
           ["@calmdown/rollup-plugin-delete", "npm:1.0.0"],\
           ["max-scripts", "workspace:."],\
           ["rolldown", "npm:1.0.0-rc.16"],\
@@ -55,6 +56,15 @@ const RAW_RUNTIME_STATE =
         "packagePeers": [\
           "@types/rolldown",\
           "rolldown"\
+        ],\
+        "linkType": "HARD"\
+      }]\
+    ]],\
+    ["@calmdown/rollup-plugin-copy", [\
+      ["npm:1.0.0", {\
+        "packageLocation": "./.yarn/cache/@calmdown-rollup-plugin-copy-npm-1.0.0-38a7865824-022fc9d7a0.zip/node_modules/@calmdown/rollup-plugin-copy/",\
+        "packageDependencies": [\
+          ["@calmdown/rollup-plugin-copy", "npm:1.0.0"]\
         ],\
         "linkType": "HARD"\
       }]\
@@ -297,6 +307,7 @@ const RAW_RUNTIME_STATE =
         "packageLocation": "./",\
         "packageDependencies": [\
           ["@calmdown/rolldown-workspace", "virtual:70a5498da57db45bc167e3abafc53c714900deaeffe3c7c17582e0a4063136f6f1516487354cd4cbcdc98b53a760804761ccf8387330fb220cd87434ed379878#npm:1.0.0-rc.3"],\
+          ["@calmdown/rollup-plugin-copy", "npm:1.0.0"],\
           ["@calmdown/rollup-plugin-delete", "npm:1.0.0"],\
           ["max-scripts", "workspace:."],\
           ["rolldown", "npm:1.0.0-rc.16"],\

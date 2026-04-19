@@ -12,7 +12,6 @@
 // commands:
 // - `bang`									... (re-)outputs current coefficients
 // - `sr <freq>`							... sets the sample rate (defaults to 44.1 kHz)
-// - `wheel <delta>`						... forwards mouse wheel information
 // - `add <type> <freq> [reso] [gain]`		... adds a filter, it will be automatically selected
 // - `remove [n]`							... removes the current filter or a filter by its number
 // - `select <n>`							... selects a filter by its number
@@ -49,7 +48,6 @@ const cascade = new FilterCascade();
 let dragState: "idle" | "active" | "ignore" = "idle";
 let dragDX = 0.0;
 let dragDY = 0.0;
-let isMouseIn = false;
 
 interface Point {
 	x: number;
@@ -307,24 +305,23 @@ function ondrag(x: number, y: number, isPressed: 1 | 0) {
 
 }
 
-function onidle() {
-	isMouseIn = true;
-}
+function onwheel(x: number, y: number, _dx: number, dy: number) {
+	let num;
+	if (dragState !== "active") {
+		const hit = hitTest(x, y, HANDLE_RADIUS * 3.0);
+		if (!hit) {
+			return;
+		}
 
-function onidleout() {
-	isMouseIn = false;
-}
-
-function wheel(delta: number) {
-	if (!isMouseIn) {
-		return;
+		num = hit.num;
 	}
 
-	cascade.moveFilterZ(delta);
+	cascade.moveFilterZ(Math.sign(dy) * 1.0, num);
 	mgraphics.redraw();
 }
 
 
+subdivide.local = 1;
 function subdivide(a: Point, b: Point) {
 	const adx = Math.abs(b.x - a.x);
 	if (adx < 1.0) {
@@ -358,11 +355,13 @@ function subdivide(a: Point, b: Point) {
 	subdivide(node, b);
 }
 
+setColor.local = 1;
 function setColor(color: string) {
 	const rgba = max.getcolor(color);
 	mgraphics.set_source_rgba(rgba[0], rgba[1], rgba[2], rgba[3]);
 }
 
+hitTest.local = 1;
 function hitTest(x: number, y: number, r: number = HANDLE_RADIUS) {
 	const filters = cascade.getFiltersOrdered();
 	const { length } = filters;
@@ -392,8 +391,3 @@ function hitTest(x: number, y: number, r: number = HANDLE_RADIUS) {
 
 	return result;
 }
-
-
-subdivide.local = 1;
-setColor.local = 1;
-hitTest.local = 1;

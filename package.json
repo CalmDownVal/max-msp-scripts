@@ -8,6 +8,7 @@
 	},
 	"devDependencies": {
 		"@calmdown/rolldown-workspace": "1.0.0-rc.3",
+		"@calmdown/rollup-plugin-copy": "1.0.0",
 		"@calmdown/rollup-plugin-delete": "1.0.0",
 		"rolldown": "1.0.0-rc.16",
 		"typescript": "6.0.3"

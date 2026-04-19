@@ -12,6 +12,8 @@ declare let outlets: number;
 declare function outlet(n: number, args: MaxValue[]): void;
 declare function outlet(n: number, ...args: MaxValue[]): void;
 
+declare function post(...args: unknown): void;
+
 type MaxValue = number | string;
 
 

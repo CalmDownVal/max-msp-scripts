@@ -1,4 +1,9 @@
-import { definePlugin, defineTarget, inProduction, inWatchMode } from "@calmdown/rolldown-workspace";
+import { definePlugin, defineTarget, inWatchMode } from "@calmdown/rolldown-workspace";
+
+const CopyPlugin = definePlugin(
+	"Copy",
+	async () => (await import("@calmdown/rollup-plugin-copy")).default,
+);
 
 const DeletePlugin = definePlugin(
 	"Delete",
@@ -16,6 +21,17 @@ const MaxV8UITarget = defineTarget("MaxV8UI", target => target
 			.disable(inWatchMode)
 			.configure({
 				targets: "./dist/**/*",
+			})
+		)
+		.plugin(CopyPlugin
+			// .disable()
+			.configure({
+				targets: [
+					{
+						srcFile: "./dist/eq.js",
+						dstFile: "/Users/cdv/Documents/Max 9/Projects/cdKick/code/eq.js",
+					},
+				],
 			})
 		)
 		.output("Main", out => out
