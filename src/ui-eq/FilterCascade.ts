@@ -409,8 +409,9 @@ const FILTER_DEFS = {
 			const w = TAU * f.freq / sr;
 			const g = Math.cos(w) / (1.0 + Math.sin(w));
 
-			f.a0 = (1.0 - g) * 0.5;
-			f.a1 = f.a0;
+			const a0 = (1.0 - g) * 0.5;
+			f.a0 = a0;
+			f.a1 = a0;
 			f.a2 = 0.0;
 			f.b1 = -g;
 			f.b2 = 0.0;
@@ -444,8 +445,9 @@ const FILTER_DEFS = {
 			const w = TAU * f.freq / sr;
 			const g = Math.cos(w) / (1.0 + Math.sin(w));
 
-			f.a0 = (1.0 + g) * 0.5;
-			f.a1 = -f.a0;
+			const a0 = (1.0 + g) * 0.5;
+			f.a0 = a0;
+			f.a1 = -a0;
 			f.a2 = 0.0;
 			f.b1 = -g;
 			f.b2 = 0.0;

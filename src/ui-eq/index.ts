@@ -1,17 +1,18 @@
-// Minimalistic EQ editor
+// an EQ curve editor
 //
 // inlets:
 // - 1										... commands
 // - 2										... param recall input (TODO)
 //
 // outlets:
-// - 1										... [cascade~] object coeffs
+// - 1										... cascade coefficients
 // - 2										... selected filter state (select, type, freq, gain, reso)
 // - 3										... param store output (TODO)
 //
 // commands:
 // - `bang`									... (re-)outputs current coefficients
 // - `sr <freq>`							... sets the sample rate (defaults to 44.1 kHz)
+// - `active <1|0>`							... report the active status of the parent device
 // - `add <type> <freq> [reso] [gain]`		... adds a filter, it will be automatically selected
 // - `remove [n]`							... removes the current filter or a filter by its number
 // - `select <n>`							... selects a filter by its number
@@ -45,6 +46,7 @@ mgraphics.relative_coords = 0;
 
 const cascade = new FilterCascade();
 
+let isActive = true;
 let dragState: "idle" | "active" | "ignore" = "idle";
 let dragDX = 0.0;
 let dragDY = 0.0;
@@ -137,7 +139,7 @@ function paint() {
 	mgraphics.stroke();
 
 	// gain curve
-	setColor("live_lcd_control_fg_alt");
+	setColor(isActive ? "live_lcd_control_fg_alt" : "live_lcd_control_fg_zombie");
 	mgraphics.set_line_width(2.0);
 	mgraphics.set_line_cap("round");
 	mgraphics.set_line_join("round");
@@ -163,12 +165,23 @@ function paint() {
 	}
 
 	if (selected) {
-		setColor("live_lcd_control_fg");
+		if (isActive) {
+			setColor("live_lcd_control_fg");
+		}
+
 		mgraphics.ellipse(selected.x - HANDLE_RADIUS, selected.y - HANDLE_RADIUS, HANDLE_DIAMETER, HANDLE_DIAMETER);
 		mgraphics.fill();
 	}
 }
 
+
+function active(toggle: number) {
+	const state = typeof toggle === "number" && toggle > 0;
+	if (isActive !== state) {
+		isActive = state;
+		mgraphics.redraw();
+	}
+}
 
 function bang() {
 	cascade.outputCoefficients();
@@ -280,28 +293,34 @@ function ondblclick(x: number, y: number) {
 	mgraphics.redraw();
 }
 
-function ondrag(x: number, y: number, isPressed: 1 | 0) {
-	if (dragState === "idle" && isPressed) {
-		const hit = hitTest(x, y, 3.0);
-		if (hit) {
-			dragState = "active";
-			dragDX = hit.dx;
-			dragDY = hit.dy;
-			cascade.selectFilter(hit.num) && mgraphics.redraw();
-		}
-		else {
-			dragState = "ignore";
-		}
+function onpointerdown(e: PointerEvent) {
+	if (dragState !== "idle") {
+		return;
 	}
 
-	if (!isPressed) {
-		dragState = "idle";
+	const hit = hitTest(e.clientX, e.clientY, 3.0);
+	if (hit) {
+		dragState = "active";
+		dragDX = hit.dx;
+		dragDY = hit.dy;
+		cascade.selectFilter(hit.num) && mgraphics.redraw();
 	}
-	else if (dragState === "active") {
-		cascade.moveFilterXY(x + dragDX, y + dragDY);
-		mgraphics.redraw();
+	else {
+		dragState = "ignore";
+	}
+}
+
+function onpointermove(e: PointerEvent) {
+	if (dragState !== "active") {
+		return;
 	}
 
+	cascade.moveFilterXY(e.clientX + dragDX, e.clientY + dragDY);
+	mgraphics.redraw();
+}
+
+function onpointerup(e: PointerEvent) {
+	dragState = "idle";
 }
 
 function onwheel(x: number, y: number, _dx: number, dy: number) {
@@ -357,7 +376,7 @@ function subdivide(a: Point, b: Point) {
 setColor.local = 1;
 function setColor(color: string) {
 	const rgba = max.getcolor(color);
-	mgraphics.set_source_rgba(rgba[0], rgba[1], rgba[2], rgba[3]);
+	mgraphics.set_source_rgba(rgba);
 }
 
 hitTest.local = 1;
