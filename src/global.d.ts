@@ -28,6 +28,8 @@ interface Box {
 
 type Rect = readonly [ left: number, top: number, right: number, bottom: number ];
 
+type Size = readonly [ width: number, height: number ];
+
 
 interface MaxObject {
 	getcolor(name: string): RGBA;
@@ -44,6 +46,7 @@ interface PointerEvent {
 
 // https://docs.cycling74.com/apiref/js/mgraphics/
 declare class MGraphics {
+	readonly size: Size;
 	autofill: 1 | 0;
 	relative_coords: 1 | 0;
 	constructor(width: number, height: number);

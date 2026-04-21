@@ -15,8 +15,7 @@
 // - `preset <name>`			... applies a preset by name (sin, tri, sqr, saw)
 // - `set <n> <amp> <phase>`	... sets the amplitude and phase of the n-th bin
 
-import { clamp } from "./common";
-import { TAU, VH, VW } from "./constants";
+import { clamp, TAU } from "./common";
 import { HarmonicSeries } from "./HarmonicSeries";
 
 inlets = 2;
@@ -34,12 +33,12 @@ let dragState: "idle" | "ignore" | "active" = "idle";
 let dragParam!: "amplitude" | "phase";
 
 function paint() {
-	const { a0, a1, p0, p1, bw, qh } = getMeasurements();
+	const { a0, a1, p0, p1, bw, qh, vw, vh } = getMeasurements();
 	const count = series.getCount();
 
 	// background
 	setColor("live_lcd_bg");
-	mgraphics.rectangle(0, 0, VW, VH);
+	mgraphics.rectangle(0, 0, vw, vh);
 	mgraphics.fill();
 
 	// bins
@@ -65,7 +64,7 @@ function paint() {
 
 	// wave
 	const dx = 4;
-	const dp = TAU / Math.floor((VW - 2.0 * dx) / dx) - Number.EPSILON;
+	const dp = TAU / Math.floor((vw - 2.0 * dx) / dx) - Number.EPSILON;
 	const wa = qh - 5;
 
 	let p;
@@ -218,14 +217,18 @@ function onpointerup() {
 
 getMeasurements.local = 1;
 function getMeasurements() {
-	const qh = VH / 4.0;
+	const vw = mgraphics.size[0];
+	const vh = mgraphics.size[1];
+	const qh = vh / 4.0;
 	return {
 		qh,
-		bw: VW / series.getCount(),
-		p0: VH - 1,
-		p1: VH - qh + 1,
-		a0: VH - qh - 1,
-		a1: VH - qh - qh + 1,
+		bw: vw / series.getCount(),
+		p0: vh - 1,
+		p1: vh - qh + 1,
+		a0: vh - qh - 1,
+		a1: vh - qh - qh + 1,
+		vw,
+		vh,
 	};
 }
 

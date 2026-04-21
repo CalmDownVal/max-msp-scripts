@@ -1,5 +1,4 @@
-import { clamp } from "./common";
-import { TAU } from "./constants";
+import { clamp, TAU } from "./common";
 
 export class HarmonicSeries {
 	private amplitude: number[] = [];

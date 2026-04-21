@@ -6,12 +6,13 @@ export const HANDLE_DIAMETER = 2.0 * HANDLE_RADIUS;
 export const FREQ_MIN =    30.0;
 export const FREQ_MAX = 20000.0;
 
-export const RESO_MIN     =  0.10;
-export const RESO_MAX     = 18.00;
-export const RESO_DEFAULT =  0.71;
+export const RESO_MIN      =  0.10;
+export const RESO_MAX      =  0.71;
+export const RESO_MAX_BELL = 18.00;
+export const RESO_DEFAULT  =  0.71;
 
 export const GAIN_MIN     = -24.0;
-export const GAIN_MAX     =  24.0;
+export const GAIN_MAX     =   0.0;
 export const GAIN_DEFAULT =   0.0;
 
 export const GRID_X = [

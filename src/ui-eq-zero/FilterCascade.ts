@@ -1,5 +1,5 @@
 import { clamp, TAU } from "./common";
-import { FREQ_MAX, FREQ_MIN, GAIN_DEFAULT, GAIN_MAX, GAIN_MIN, MAX_FILTERS, OUT_COEFFS, OUT_STATE, RESO_DEFAULT, RESO_MAX, RESO_MIN } from "./constants";
+import { FREQ_MAX, FREQ_MIN, GAIN_DEFAULT, GAIN_MAX, GAIN_MIN, MAX_FILTERS, OUT_COEFFS, OUT_STATE, RESO_DEFAULT, RESO_MAX, RESO_MAX_BELL, RESO_MIN } from "./constants";
 import { Convert } from "./Convert";
 
 export type FilterType = keyof typeof FILTER_DEFS;
@@ -139,7 +139,7 @@ export class FilterCascade {
 			b2: 0.0,
 			type,
 			freq: freqClamped,
-			reso: clamp(reso, RESO_MIN, RESO_MAX),
+			reso: clamp(reso, RESO_MIN, type === "pn2" ? RESO_MAX_BELL : RESO_MAX),
 			gain: clamp(gain, GAIN_MIN, GAIN_MAX),
 			x: Convert.f2x(freqClamped),
 			y: 0.0,
@@ -291,7 +291,7 @@ export class FilterCascade {
 			return false;
 		}
 
-		const clampedReso = clamp(reso, RESO_MIN, RESO_MAX);
+		const clampedReso = clamp(reso, RESO_MIN, filter.type === "pn2" ? RESO_MAX_BELL : RESO_MAX);
 		if (filter.reso === clampedReso) {
 			return false;
 		}
@@ -362,7 +362,7 @@ export class FilterCascade {
 
 		const def = FILTER_DEFS[filter.type];
 		if (def.reso === "z") {
-			this.setFilterReso(Convert.z2r(filter.z + dz), n);
+			this.setFilterReso(Convert.z2r(filter.z + dz, filter.type === "pn2"), n);
 		}
 	}
 
@@ -595,7 +595,7 @@ function getZ(filter: Filter) {
 	const def = FILTER_DEFS[filter.type];
 
 	if (def.reso === "z") {
-		return Convert.r2z(filter.reso);
+		return Convert.r2z(filter.reso, filter.type === "pn2");
 	}
 
 	return Convert.r2z(RESO_DEFAULT);
