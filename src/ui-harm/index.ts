@@ -1,5 +1,8 @@
 // a harmonic series editor
 //
+// arguments:
+// - [bins]						... initial number of bins (optional, defaults to 16)
+//
 // inlets:
 // - 1							... commands
 // - 2							... param recall input (TODO)
@@ -18,6 +21,12 @@
 import { clamp, TAU } from "./common";
 import { HarmonicSeries } from "./HarmonicSeries";
 
+const INLET_COMMAND = 0;
+const INLET_RECALL = 1;
+
+const OUTLET_UPDATE = 0;
+const OUTLET_RECALL = 1;
+
 inlets = 2;
 outlets = 2;
 
@@ -25,7 +34,10 @@ mgraphics.init();
 mgraphics.autofill = 0;
 mgraphics.relative_coords = 0;
 
-const series = new HarmonicSeries();
+const series = new HarmonicSeries((() => {
+	const n = Number(jsarguments[1]);
+	return Number.isInteger(n) && n > 0 ? n : 16;
+})());
 
 let isActive = true;
 let currentBuffer: Buffer | null = null;
@@ -43,119 +55,51 @@ function paint() {
 
 	// bins
 	let x;
+	let x0;
+	let x1;
 	let y;
 	let n;
 
 	setColor(isActive ? "live_lcd_control_fg" : "live_lcd_control_fg_zombie");
-	for (n = 0, x = 0; n < count; n += 1) {
+	for (n = 0, x = 1.0; n < count; n += 1) {
+		x0 = Math.round(x);
+		x1 = Math.round(x + bw) - 1;
 		y = a0 + (a1 - a0) * series.getAmplitude(n) - 1;
-		mgraphics.rectangle(x, y, bw - 1, a0 - y);
+		mgraphics.rectangle(x0, y, x1 - x0, a0 - y);
 		mgraphics.fill();
-		x = Math.round(x + bw);
+		x += bw;
 	}
 
 	setColor(isActive ? "live_lcd_control_fg_alt" : "live_lcd_control_fg_zombie");
-	for (n = 0, x = 0; n < count; n += 1) {
+	for (n = 0, x = 1.0; n < count; n += 1) {
+		x0 = Math.round(x);
+		x1 = Math.round(x + bw) - 1;
 		y = p0 + (p1 - p0) * (0.5 + series.getPhase(n) / TAU) - 1;
-		mgraphics.rectangle(x, y, bw - 1, p0 - y);
+		mgraphics.rectangle(x0, y, x1 - x0, p0 - y);
 		mgraphics.fill();
-		x = Math.round(x + bw);
+		x += bw;
 	}
 
 	// wave
-	const dx = 4;
-	const dp = TAU / Math.floor((vw - 2.0 * dx) / dx) - Number.EPSILON;
+	const steps = Math.ceil((vw - 4.0) * 0.25);
+	const dx = (vw - 4.0) / steps;
+	const dp = TAU / steps - Number.EPSILON;
 	const wa = qh - 5;
 
 	let p;
 
+	x = 2.0;
 	mgraphics.set_line_width(2.0);
 	mgraphics.set_line_join("round");
 	mgraphics.set_line_cap("round");
-	mgraphics.move_to(dx, qh + series.getAmplitudeAt(0.0) * wa);
+	mgraphics.move_to(x, qh + series.getAmplitudeAt(0.0) * wa);
 
-	for (p = dp, x = 2.0 * dx; p <= TAU; p += dp, x += dx) {
+	for (p = dp, x += dx; p < TAU; p += dp, x += dx) {
 		mgraphics.line_to(x, qh + series.getAmplitudeAt(p) * wa);
 	}
 
 	mgraphics.stroke();
 }
-
-
-function active(toggle: number) {
-	const state = typeof toggle === "number" && toggle > 0;
-	if (isActive !== state) {
-		isActive = state;
-		mgraphics.redraw();
-	}
-}
-
-function bang() {
-	if (currentBuffer) {
-		currentBuffer.poke(1, 0, series.getAmplitudes());
-		currentBuffer.poke(2, 0, series.getPhases());
-	}
-
-	mgraphics.redraw();
-}
-
-function bins(n: number) {
-	if (!Number.isInteger(n)) {
-		return;
-	}
-
-	series.setBinCount(n) && bang();
-}
-
-function buffer(name: string) {
-	if (typeof name !== "string") {
-		return;
-	}
-
-	currentBuffer?.freepeer();
-	currentBuffer = new Buffer(name);
-	bang();
-}
-
-function preset(name: string) {
-	switch (name) {
-		case "sin":
-			series.makeSine();
-			break;
-
-		case "tri":
-			series.makeTriangle();
-			break;
-
-		case "sqr":
-			series.makeSquare();
-			break;
-
-		case "saw":
-			series.makeSawtooth();
-			break;
-
-		default:
-			return;
-	}
-
-	bang();
-}
-
-function set(n: number, amplitude: number, phase: number) {
-	if (!(
-		Number.isInteger(n) &&
-		Number.isFinite(amplitude) &&
-		Number.isFinite(phase)
-	)) {
-		return;
-	}
-
-	series.setAmplitude(n, amplitude);
-	series.setPhase(n, phase);
-	bang();
-}
-
 
 function onpointerdown(e: PointerEvent) {
 	if (dragState !== "idle") {
@@ -184,7 +128,7 @@ function onpointermove(e: PointerEvent) {
 	}
 
 	const { a0, a1, p0, p1, bw } = getMeasurements();
-	const n = Math.floor(e.clientX / bw);
+	const n = Math.floor((e.clientX - 1) / bw);
 	if (n < 0 || n >= series.getCount()) {
 		return;
 	}
@@ -205,13 +149,106 @@ function onpointermove(e: PointerEvent) {
 	}
 
 	if (didChange) {
-		bang();
-		outlet(0, "bang");
+		refresh();
+		outlet(OUTLET_UPDATE, "bang");
 	}
 }
 
 function onpointerup() {
 	dragState = "idle";
+}
+
+
+function active(toggle: number) {
+	if (inlet !== INLET_COMMAND || typeof toggle !== "number") {
+		return;
+	}
+
+	const state = toggle > 0;
+	if (isActive !== state) {
+		isActive = state;
+		mgraphics.redraw();
+	}
+}
+
+function bang() {
+	if (inlet !== INLET_COMMAND) {
+		return;
+	}
+
+	refresh();
+}
+
+function bins(n: number) {
+	if (inlet !== INLET_COMMAND || !Number.isInteger(n)) {
+		return;
+	}
+
+	series.setBinCount(n) && refresh();
+}
+
+function buffer(name: string) {
+	if (inlet !== INLET_COMMAND || typeof name !== "string") {
+		return;
+	}
+
+	currentBuffer?.freepeer();
+	currentBuffer = new Buffer(name);
+	series.toBuffer(currentBuffer);
+}
+
+function preset(name: string) {
+	if (inlet !== INLET_COMMAND) {
+		return;
+	}
+
+	switch (name) {
+		case "sin":
+			series.makeSine();
+			break;
+
+		case "tri":
+			series.makeTriangle();
+			break;
+
+		case "sqr":
+			series.makeSquare();
+			break;
+
+		case "saw":
+			series.makeSawtooth();
+			break;
+
+		default:
+			return;
+	}
+
+	refresh();
+}
+
+function set(n: number, amplitude: number, phase: number) {
+	if (!(
+		inlet === INLET_COMMAND &&
+		Number.isInteger(n) &&
+		Number.isFinite(amplitude) &&
+		Number.isFinite(phase)
+	)) {
+		return;
+	}
+
+	const a = series.setAmplitude(n, amplitude);
+	const p = series.setPhase(n, phase);
+	if (a || p) {
+		refresh();
+	}
+}
+
+function dictionary(name: string) {
+	if (inlet !== INLET_RECALL || typeof name !== "string") {
+		return;
+	}
+
+	series.setBackingDict(name) && refresh();
 }
 
 
@@ -222,7 +259,7 @@ function getMeasurements() {
 	const qh = vh / 4.0;
 	return {
 		qh,
-		bw: vw / series.getCount(),
+		bw: (vw - 1) / series.getCount(),
 		p0: vh - 1,
 		p1: vh - qh + 1,
 		a0: vh - qh - 1,
@@ -236,4 +273,14 @@ setColor.local = 1;
 function setColor(color: string) {
 	const rgba = max.getcolor(color);
 	mgraphics.set_source_rgba(rgba);
+}
+
+refresh.local = 1;
+function refresh() {
+	if (currentBuffer) {
+		series.toBuffer(currentBuffer);
+	}
+
+	outlet(OUTLET_RECALL, "dictionary", series.getBackingDict());
+	mgraphics.redraw();
 }

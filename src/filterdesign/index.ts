@@ -40,6 +40,11 @@ function sr(rate: number) {
 
 function anything() {
 	const list = arrayfromargs(messagename, arguments);
+	if (list.length === 0 || (list.length % 4) !== 0) {
+		unity();
+		return;
+	}
+
 	const result: number[] = [];
 
 	let i = 0;
@@ -61,6 +66,7 @@ function anything() {
 			Number.isFinite(reso) &&
 			Number.isFinite(gain)
 		)) {
+			unity();
 			return;
 		}
 
@@ -74,6 +80,11 @@ function anything() {
 	}
 
 	outlet(0, result);
+}
+
+unity.local = 1;
+function unity() {
+	outlet(0, [ 1.0, 0.0, 0.0, 0.0, 0.0 ]);
 }
 
 

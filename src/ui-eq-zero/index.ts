@@ -2,17 +2,17 @@
 //
 // inlets:
 // - 1										... commands
-// - 2										... param recall input (TODO)
+// - 2										... param recall input
 //
 // outlets:
 // - 1										... cascade coefficients
 // - 2										... selected filter state (select, type, freq, gain, reso)
-// - 3										... param store output (TODO)
+// - 3										... param store output
 //
-// commands:
+// inlet 1 commands:
 // - `bang`									... (re-)outputs current coefficients
 // - `sr <freq>`							... sets the sample rate (defaults to 44.1 kHz)
-// - `active <1|0>`							... report the active status of the parent device
+// - `active <1|0>`							... sets the active status of the device
 // - `add <type> <freq> [reso] [gain]`		... adds a filter, it will be automatically selected
 // - `remove [n]`							... removes the current filter or a filter by its number
 // - `select <n>`							... selects a filter by its number
@@ -32,7 +32,7 @@
 // - hs2									... 2nd-order high shelf (freq, reso, gain)
 // - pn2									... 2nd-order peak-notch (freq, reso, gain)
 
-import { GRID_X, GRID_X_HIGHLIGHT, GRID_Y, GRID_Y_HIGHLIGHT, HANDLE_RADIUS, HANDLE_DIAMETER, GAIN_DEFAULT, RESO_DEFAULT } from "./constants";
+import { GRID_X, GRID_X_HIGHLIGHT, GRID_Y, GRID_Y_HIGHLIGHT, HANDLE_RADIUS, HANDLE_DIAMETER, GAIN_DEFAULT, RESO_DEFAULT, INLET_COMMAND, INLET_RECALL } from "./constants";
 import { Convert } from "./Convert";
 import { FilterCascade } from "./FilterCascade";
 
@@ -61,7 +61,9 @@ interface Point {
 function paint() {
 	const vw = mgraphics.size[0];
 	const vh = mgraphics.size[1];
-	Convert.setViewportSize(vw, vh);
+	if (Convert.setViewportSize(vw, vh)) {
+		cascade.resetCoords();
+	}
 
 	// build linked list of plot points
 	const head: Point = {
@@ -180,20 +182,38 @@ function paint() {
 
 
 function active(toggle: number) {
-	const state = typeof toggle === "number" && toggle > 0;
+	if (inlet !== INLET_COMMAND || typeof toggle !== "number") {
+		return;
+	}
+
+	const state = toggle > 0;
 	if (isActive !== state) {
 		isActive = state;
 		mgraphics.redraw();
 	}
 }
 
+function anything() {
+	if (inlet !== INLET_RECALL) {
+		return;
+	}
+
+	const list = arrayfromargs(messagename, arguments);
+	cascade.setState(list);
+	mgraphics.redraw();
+}
+
 function bang() {
-	cascade.outputCoefficients();
+	if (inlet !== INLET_COMMAND) {
+		return;
+	}
+
+	cascade.outputState();
 	mgraphics.redraw();
 }
 
 function sr(rate: number) {
-	if (!Number.isFinite(rate) || rate <= 10.0) {
+	if (inlet !== INLET_COMMAND || !Number.isFinite(rate) || rate <= 10.0) {
 		return;
 	}
 
@@ -201,7 +221,7 @@ function sr(rate: number) {
 }
 
 function add(type: string, freq: number, reso: number = RESO_DEFAULT, gain: number = GAIN_DEFAULT) {
-	if (!(
+	if (inlet !== INLET_COMMAND || !(
 		typeof type === "string" &&
 		cascade.isKnownType(type) &&
 		Number.isFinite(freq) &&
@@ -215,7 +235,7 @@ function add(type: string, freq: number, reso: number = RESO_DEFAULT, gain: numb
 }
 
 function remove(n?: number) {
-	if (n !== undefined && !Number.isInteger(n)) {
+	if (inlet !== INLET_COMMAND || n !== undefined && !Number.isInteger(n)) {
 		return;
 	}
 
@@ -226,7 +246,7 @@ function remove(n?: number) {
 }
 
 function select(n: number) {
-	if (!Number.isInteger(n)) {
+	if (inlet !== INLET_COMMAND || !Number.isInteger(n)) {
 		return;
 	}
 
@@ -234,7 +254,7 @@ function select(n: number) {
 }
 
 function type(type: string, n?: number) {
-	if (!(
+	if (inlet !== INLET_COMMAND || !(
 		typeof type === "string" &&
 		cascade.isKnownType(type) &&
 		(n === undefined || Number.isInteger(n))
@@ -246,7 +266,7 @@ function type(type: string, n?: number) {
 }
 
 function freq(freq: number, n?: number) {
-	if (!Number.isFinite(freq) || (n !== undefined && !Number.isInteger(n))) {
+	if (inlet !== INLET_COMMAND || !Number.isFinite(freq) || (n !== undefined && !Number.isInteger(n))) {
 		return;
 	}
 
@@ -254,7 +274,7 @@ function freq(freq: number, n?: number) {
 }
 
 function reso(reso: number, n?: number) {
-	if (!Number.isFinite(reso) || (n !== undefined && !Number.isInteger(n))) {
+	if (inlet !== INLET_COMMAND || !Number.isFinite(reso) || (n !== undefined && !Number.isInteger(n))) {
 		return;
 	}
 
@@ -262,7 +282,7 @@ function reso(reso: number, n?: number) {
 }
 
 function gain(gain: number, n?: number) {
-	if (!Number.isFinite(gain) || (n !== undefined && !Number.isInteger(n))) {
+	if (inlet !== INLET_COMMAND || !Number.isFinite(gain) || (n !== undefined && !Number.isInteger(n))) {
 		return;
 	}
 

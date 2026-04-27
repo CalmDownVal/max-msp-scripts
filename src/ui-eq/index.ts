@@ -180,7 +180,11 @@ function paint() {
 
 
 function active(toggle: number) {
-	const state = typeof toggle === "number" && toggle > 0;
+	if (typeof toggle !== "number") {
+		return;
+	}
+
+	const state = toggle > 0;
 	if (isActive !== state) {
 		isActive = state;
 		mgraphics.redraw();

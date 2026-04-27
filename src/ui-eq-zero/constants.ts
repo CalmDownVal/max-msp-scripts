@@ -41,7 +41,12 @@ export const GRID_Y_HIGHLIGHT = [
 	0.0,
 ];
 
-// outlet assignments
-export const OUT_COEFFS = 0;
-export const OUT_STATE = 1;
-export const OUT_PARAM = 2;
+
+// I/O
+
+export const INLET_COMMAND = 0;
+export const INLET_RECALL = 1;
+
+export const OUTLET_CASCADE = 0;
+export const OUTLET_STATE = 1;
+export const OUTLET_RECALL = 2;

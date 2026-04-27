@@ -1,21 +1,14 @@
 import { clamp, TAU } from "./common";
 
 export class HarmonicSeries {
+	private dict = new Dict();
 	private amplitude: number[] = [];
 	private phase: number[] = [];
 	private count = 0;
 
-	public constructor(count: number = 10) {
+	public constructor(count: number) {
 		this.setBinCount(count);
 		this.makeSine();
-	}
-
-	public getAmplitudes(): readonly number[] {
-		return this.amplitude;
-	}
-
-	public getPhases(): readonly number[] {
-		return this.phase;
 	}
 
 	public getCount() {
@@ -44,19 +37,74 @@ export class HarmonicSeries {
 		return amp / Math.max(mag, 0.1);
 	}
 
-	public setBinCount(n: number) {
-		const count = clamp(Math.round(n), 1, 128);
+	public getBackingDict() {
+		return this.dict.name;
+	}
+
+	public setBackingDict(name: string) {
+		if (this.dict.name === name) {
+			return false;
+		}
+
+		const dict = new Dict(name);
+		this.dict = dict;
+
+		let count = dict.get("bins");
+		if (typeof count !== "number") {
+			count = this.count;
+		}
+
 		const { amplitude, phase } = this;
+
+		let n = 0;
+		let a;
+		let p;
+
+		this.count = count;
+		amplitude.length = count;
+		phase.length = count;
+
+		for (; n < count; n += 1) {
+			a = dict.get(`a${n}`);
+			a = typeof a === "number" ? clamp(a) : 0.0;
+
+			p = dict.get(`p${n}`);
+			p = typeof p === "number" ? wrap(p) : 0.0;
+
+			amplitude[n] = a;
+			phase[n] = p;
+		}
+
+		return true;
+	}
+
+	public toBuffer(buffer: Buffer) {
+		buffer.poke(1, 0, this.amplitude);
+		buffer.poke(2, 0, this.phase);
+	}
+
+	public setBinCount(n: number) {
+		const count = clamp(Math.trunc(n), 1, 128);
+		const { amplitude, phase, dict } = this;
 
 		if (count < this.count) {
 			amplitude.length = count;
 			phase.length = count;
+
+			let i = this.count - 1;
+			while (i >= count) {
+				dict.remove(`a${i}`);
+				dict.remove(`p${i}`);
+				i -= 1;
+			}
 		}
 		else if (count > this.count) {
 			let i = this.count;
 			for (; i < count; i += 1) {
 				amplitude.push(0.0);
 				phase.push(0.0);
+				dict.set(`a${i}`, 0.0);
+				dict.set(`p${i}`, 0.0);
 			}
 		}
 		else {
@@ -64,6 +112,7 @@ export class HarmonicSeries {
 		}
 
 		this.count = count;
+		dict.set("bins", count);
 		return true;
 	}
 
@@ -78,6 +127,7 @@ export class HarmonicSeries {
 		}
 
 		this.amplitude[n] = clamped;
+		this.dict.set(`a${n}`, clamped);
 		return true;
 	}
 
@@ -86,19 +136,13 @@ export class HarmonicSeries {
 			return false;
 		}
 
-		let clamped = phase % TAU;
-		if (clamped > Math.PI) {
-			clamped -= TAU;
-		}
-		else if (clamped < -Math.PI) {
-			clamped += TAU;
-		}
-
-		if (this.phase[n] === clamped) {
+		const wrapped = wrap(phase);
+		if (this.phase[n] === wrapped) {
 			return false;
 		}
 
-		this.phase[n] = clamped;
+		this.phase[n] = wrapped;
+		this.dict.set(`p${n}`, wrapped);
 		return true;
 	}
 
@@ -112,6 +156,8 @@ export class HarmonicSeries {
 			amplitude[n] = 0.0;
 			phase[n] = 0.0;
 		}
+
+		this.syncDict();
 	}
 
 	public makeTriangle() {
@@ -122,6 +168,8 @@ export class HarmonicSeries {
 			amplitude[n] = (n % 2) === 0 ? 1.0 / Math.pow(n + 1.0, 2.0) : 0.0;
 			phase[n] = (n % 4) === 0 ? 0.0 : Math.PI;
 		}
+
+		this.syncDict();
 	}
 
 	public makeSquare() {
@@ -132,6 +180,8 @@ export class HarmonicSeries {
 			amplitude[n] = (n % 2) === 0 ? 1.0 / (n + 1.0) : 0.0;
 			phase[n] = 0.0;
 		}
+
+		this.syncDict();
 	}
 
 	public makeSawtooth() {
@@ -142,5 +192,30 @@ export class HarmonicSeries {
 			amplitude[n] = 1.0 / (n + 1.0);
 			phase[n] = 0.0;
 		}
+
+		this.syncDict();
 	}
+
+	private syncDict() {
+		const { amplitude, phase, count, dict } = this;
+
+		let n = 0;
+		for (; n < count; n += 1) {
+			dict.set(`a${n}`, amplitude[n]);
+			dict.set(`p${n}`, phase[n]);
+		}
+	}
+}
+
+wrap.local = true;
+function wrap(p: number) {
+	let w = p % TAU;
+	if (w > Math.PI) {
+		w -= TAU;
+	}
+	else if (w < -Math.PI) {
+		w += TAU;
+	}
+
+	return w;
 }

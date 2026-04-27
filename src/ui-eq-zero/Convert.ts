@@ -33,7 +33,7 @@ export const Convert = (() => {
 		VH: vh,
 		setViewportSize(width: number, height: number) {
 			if (width === vw && height === vh) {
-				return;
+				return false;
 			}
 
 			vw = Math.max(width, 32.0);
@@ -56,6 +56,8 @@ export const Convert = (() => {
 			const gainScale = (GAIN_MAX - GAIN_MIN) / (vh - HANDLE_DIAMETER);
 			VISIBLE_GAIN_MIN = GAIN_MIN - HANDLE_RADIUS * gainScale;
 			VISIBLE_GAIN_MAX = GAIN_MAX + HANDLE_RADIUS * gainScale;
+
+			return true;
 		},
 		x2f(x: number) {
 			return Math.pow(10.0, VISIBLE_FREQ_MIN_EXP + clamp(x / vw) * (VISIBLE_FREQ_MAX_EXP - VISIBLE_FREQ_MIN_EXP));

@@ -28,6 +28,10 @@ const MaxV8UITarget = defineTarget("MaxV8UI", target => target
 			.configure({
 				targets: [
 					{
+						srcFile: "./dist/filterdesign.js",
+						dstFile: "/Users/cdv/Documents/Max 9/Projects/Perc30/code/filterdesign.js",
+					},
+					{
 						srcFile: "./dist/ui-eq.js",
 						dstFile: "/Users/cdv/Documents/Max 9/Projects/Perc30/code/ui-eq.js",
 					},
@@ -40,8 +44,8 @@ const MaxV8UITarget = defineTarget("MaxV8UI", target => target
 						dstFile: "/Users/cdv/Documents/Max 9/Projects/Perc30/code/ui-harm.js",
 					},
 					{
-						srcFile: "./dist/filterdesign.js",
-						dstFile: "/Users/cdv/Documents/Max 9/Projects/Perc30/code/filterdesign.js",
+						srcFile: "./dist/ui-poly.js",
+						dstFile: "/Users/cdv/Documents/Max 9/Projects/Perc30/code/ui-poly.js",
 					},
 				],
 			})
@@ -62,4 +66,5 @@ MaxV8UITarget.build(target => {
 	target.entry("ui-eq", "./src/ui-eq/index.ts");
 	target.entry("ui-eq-zero", "./src/ui-eq-zero/index.ts");
 	target.entry("ui-harm", "./src/ui-harm/index.ts");
+	target.entry("ui-poly", "./src/ui-poly/index.ts");
 });

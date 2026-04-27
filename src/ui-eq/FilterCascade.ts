@@ -106,6 +106,12 @@ export class FilterCascade {
 	}
 
 	public outputCoefficients() {
+		if (this.coefficients.length === 0) {
+			// fallback to unity gain across the range
+			outlet(OUT_COEFFS, [ 1.0, 0.0, 0.0, 0.0, 0.0 ]);
+			return;
+		}
+
 		outlet(OUT_COEFFS, this.coefficients);
 	}
 

@@ -1,5 +1,5 @@
 import { clamp, TAU } from "./common";
-import { FREQ_MAX, FREQ_MIN, GAIN_DEFAULT, GAIN_MAX, GAIN_MIN, MAX_FILTERS, OUT_COEFFS, OUT_STATE, RESO_DEFAULT, RESO_MAX, RESO_MAX_BELL, RESO_MIN } from "./constants";
+import { FREQ_MAX, FREQ_MIN, GAIN_DEFAULT, GAIN_MAX, GAIN_MIN, MAX_FILTERS, OUTLET_CASCADE, OUTLET_RECALL, OUTLET_STATE, RESO_DEFAULT, RESO_MAX, RESO_MAX_BELL, RESO_MIN } from "./constants";
 import { Convert } from "./Convert";
 
 export type FilterType = keyof typeof FILTER_DEFS;
@@ -28,9 +28,11 @@ export interface Filter {
 	z: number;
 }
 
+const COEFFS_UNITY = [ 1.0, 0.0, 0.0, 0.0, 0.0 ];
+
 export class FilterCascade {
 	private readonly coefficients: number[] = [];
-	private readonly filtersOrdered: Filter[] = [];
+	private filtersOrdered: Filter[] = [];
 	private filtersSorted: Filter[] = [];
 	private sampleRate = 44100.0;
 	private selected = 0;
@@ -105,8 +107,72 @@ export class FilterCascade {
 		return (FILTER_DEFS as Record<string, FilterDefinition | undefined>)[type] !== undefined;
 	}
 
-	public outputCoefficients() {
-		outlet(OUT_COEFFS, this.coefficients);
+	public resetCoords() {
+		for (const filter of this.filtersOrdered) {
+			filter.x = Convert.f2x(filter.freq);
+			filter.y = getY(filter);
+		}
+	}
+
+	public getState() {
+		if (this.filtersOrdered.length === 0) {
+			return [ "off" ];
+		}
+
+		const filters = this.getFiltersSorted();
+		const state: MaxValue[] = [];
+		for (const filter of filters) {
+			state.push(
+				filter.type,
+				filter.freq,
+				filter.reso,
+				filter.gain,
+			);
+		}
+
+		return state;
+	}
+
+	public setState(state: readonly MaxValue[]) {
+		const filters: Filter[] = [];
+		if (state.length !== 0 && (state.length % 4) === 0) {
+			let i = 0;
+			let type;
+			let freq;
+			let reso;
+			let gain;
+
+			while (i < state.length) {
+				type = state[i++] as string;
+				freq = state[i++] as number;
+				reso = state[i++] as number;
+				gain = state[i++] as number;
+
+				if (!(
+					this.isKnownType(type) &&
+					Number.isFinite(freq) &&
+					Number.isFinite(reso) &&
+					Number.isFinite(gain)
+				)) {
+					filters.length = 0; // fallback to unity
+					break;
+				}
+
+				filters.push(initFilter(type, freq, reso, gain));
+			}
+		}
+
+		this.filtersOrdered = filters;
+		this.filtersSorted = filters.slice();
+		this.selected = 0;
+
+		outlet(OUTLET_STATE, "select", 0);
+		this.update();
+	}
+
+	public outputState() {
+		outlet(OUTLET_RECALL, this.getState());
+		outlet(OUTLET_CASCADE, this.coefficients.length === 0 ? COEFFS_UNITY : this.coefficients);
 	}
 
 
@@ -120,7 +186,7 @@ export class FilterCascade {
 		});
 
 		this.sampleRate = rate;
-		this.recalculate();
+		this.update();
 		return true;
 	}
 
@@ -129,29 +195,10 @@ export class FilterCascade {
 			return false;
 		}
 
-		const freqClamped = clamp(freq, FREQ_MIN, FREQ_MAX);
-		const filter: Filter = {
-			dirty: true,
-			a0: 0.0,
-			a1: 0.0,
-			a2: 0.0,
-			b1: 0.0,
-			b2: 0.0,
-			type,
-			freq: freqClamped,
-			reso: clamp(reso, RESO_MIN, type === "pn2" ? RESO_MAX_BELL : RESO_MAX),
-			gain: clamp(gain, GAIN_MIN, GAIN_MAX),
-			x: Convert.f2x(freqClamped),
-			y: 0.0,
-			z: 0.0,
-		};
-
-		filter.y = getY(filter);
-		filter.z = getZ(filter);
-
+		const filter = initFilter(type, freq, reso, gain);
 		this.filtersOrdered.push(filter);
 		this.filtersSorted.push(filter);
-		this.recalculate();
+		this.update();
 		this.selectFilter(this.filtersOrdered.length);
 
 		return true;
@@ -165,7 +212,7 @@ export class FilterCascade {
 
 		this.filtersOrdered.splice(n - 1, 1);
 		this.filtersSorted = this.filtersOrdered.slice();
-		this.recalculate();
+		this.update();
 
 		if (this.selected !== n) {
 			return true;
@@ -194,19 +241,19 @@ export class FilterCascade {
 			n = 0;
 		}
 
-		if (this.selected === n) {
+		if (n === this.selected) {
 			return false;
 		}
 
 		this.selected = n;
-		outlet(OUT_STATE, "select", n);
+		outlet(OUTLET_STATE, "select", n);
 
 		if (filter) {
 			const def = FILTER_DEFS[filter.type];
-			outlet(OUT_STATE, "type", filter.type);
-			outlet(OUT_STATE, "freq", filter.freq);
-			outlet(OUT_STATE, "reso", def.reso === "off" ? "off" : filter.reso);
-			outlet(OUT_STATE, "gain", def.gain === "off" ? "off" : filter.gain);
+			outlet(OUTLET_STATE, "type", filter.type);
+			outlet(OUTLET_STATE, "freq", filter.freq);
+			outlet(OUTLET_STATE, "reso", def.reso === "off" ? "off" : filter.reso);
+			outlet(OUTLET_STATE, "gain", def.gain === "off" ? "off" : filter.gain);
 		}
 
 		return true;
@@ -247,12 +294,12 @@ export class FilterCascade {
 		filter.y = getY(filter);
 		filter.z = getZ(filter);
 		filter.dirty = true;
-		this.recalculate();
+		this.update();
 
-		if (this.selected === n) {
-			outlet(OUT_STATE, "type", filter.type);
-			outlet(OUT_STATE, "reso", def.reso === "off" ? "off" : filter.reso);
-			outlet(OUT_STATE, "gain", def.gain === "off" ? "off" : filter.gain);
+		if (n === this.selected) {
+			outlet(OUTLET_STATE, "type", filter.type);
+			outlet(OUTLET_STATE, "reso", def.reso === "off" ? "off" : filter.reso);
+			outlet(OUTLET_STATE, "gain", def.gain === "off" ? "off" : filter.gain);
 		}
 
 		return true;
@@ -272,10 +319,10 @@ export class FilterCascade {
 		filter.freq = clampedFreq;
 		filter.x = Convert.f2x(clampedFreq);
 		filter.dirty = true;
-		this.recalculate();
+		this.update();
 
-		if (this.selected === n) {
-			outlet(OUT_STATE, "freq", filter.freq);
+		if (n === this.selected) {
+			outlet(OUTLET_STATE, "freq", filter.freq);
 		}
 
 		return true;
@@ -300,10 +347,10 @@ export class FilterCascade {
 		filter.y = getY(filter);
 		filter.z = getZ(filter);
 		filter.dirty = true;
-		this.recalculate();
+		this.update();
 
-		if (this.selected === n) {
-			outlet(OUT_STATE, "reso", filter.reso);
+		if (n === this.selected) {
+			outlet(OUTLET_STATE, "reso", filter.reso);
 		}
 
 		return true;
@@ -328,10 +375,10 @@ export class FilterCascade {
 		filter.y = getY(filter);
 		filter.z = getZ(filter);
 		filter.dirty = true;
-		this.recalculate();
+		this.update();
 
-		if (this.selected === n) {
-			outlet(OUT_STATE, "gain", filter.gain);
+		if (n === this.selected) {
+			outlet(OUTLET_STATE, "gain", filter.gain);
 		}
 
 		return true;
@@ -367,7 +414,7 @@ export class FilterCascade {
 	}
 
 
-	private recalculate() {
+	private update() {
 		const { coefficients, sampleRate } = this;
 		const filters = this.getFiltersSorted();
 		const { length } = filters;
@@ -391,7 +438,7 @@ export class FilterCascade {
 			coefficients[coeffIndex++] = filter.b2;
 		}
 
-		this.outputCoefficients();
+		this.outputState();
 	}
 }
 
@@ -599,4 +646,27 @@ function getZ(filter: Filter) {
 	}
 
 	return Convert.r2z(RESO_DEFAULT);
+}
+
+function initFilter(type: FilterType, freq: number, reso: number, gain: number) {
+	const freqClamped = clamp(freq, FREQ_MIN, FREQ_MAX);
+	const filter: Filter = {
+		dirty: true,
+		a0: 0.0,
+		a1: 0.0,
+		a2: 0.0,
+		b1: 0.0,
+		b2: 0.0,
+		type,
+		freq: freqClamped,
+		reso: clamp(reso, RESO_MIN, type === "pn2" ? RESO_MAX_BELL : RESO_MAX),
+		gain: clamp(gain, GAIN_MIN, GAIN_MAX),
+		x: Convert.f2x(freqClamped),
+		y: 0.0,
+		z: 0.0,
+	};
+
+	filter.y = getY(filter);
+	filter.z = getZ(filter);
+	return filter;
 }
